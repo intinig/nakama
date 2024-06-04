@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"log"
 	"sync/atomic"
 	"time"
 
@@ -41,9 +42,21 @@ func (m *MetricsGrpcHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo)
 	return context.WithValue(ctx, ctxMetricsGrpcHandlerKey{}, &metricsGrpcHandlerData{fullMethodName: info.FullMethodName})
 }
 
-// HandleRPC processes the RPC stats.
 func (m *MetricsGrpcHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	data := ctx.Value(ctxMetricsGrpcHandlerKey{}).(*metricsGrpcHandlerData)
+	rawData := ctx.Value(ctxMetricsGrpcHandlerKey{})
+	if rawData == nil {
+		// Log this situation for further investigation
+		log.Printf("Expected metricsGrpcHandlerData in context, but found nil")
+		return
+	}
+
+	data, ok := rawData.(*metricsGrpcHandlerData)
+	if !ok {
+		// Log this situation as well
+		log.Printf("Incorrect type for metricsGrpcHandlerData")
+		return
+	}
+
 	switch rs := rs.(type) {
 	case *stats.Begin:
 		// No-op.
